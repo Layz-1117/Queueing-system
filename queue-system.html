@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抖音燕云灰度排队系统</title>
+    <!-- 引入Font Awesome图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background-image: url('https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=neutral%20professional%20background%20with%20subtle%20pattern%20for%20business%20system&image_size=landscape_16_9');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 30px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(3px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* 响应式设计 */
+        @media screen and (max-width: 768px) {
+            .container {
+                margin: 20px 10px;
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            h2 {
+                font-size: 16px;
+            }
+            
+            .input-group input {
+                font-size: 14px;
+                padding: 8px;
+            }
+            
+            button {
+                font-size: 14px;
+                padding: 8px 16px;
+                width: 100%;
+                margin: 5px 0;
+            }
+            
+            .queue-item, .completed-item {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 15px;
+            }
+            
+            .queue-actions, .completed-actions {
+                margin-top: 10px;
+                width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+            
+            .queue-actions button, .completed-actions button {
+                flex: 1;
+                min-width: 80px;
+            }
+            
+            .queue-position {
+                order: -1;
+                margin-bottom: 5px;
+            }
+            
+            .status {
+                margin-bottom: 5px;
+            }
+            
+            /* 调整输入区域的按钮布局 */
+            .input-section {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .input-section button {
+                align-self: flex-start;
+                width: auto;
+            }
+        }
+        
+        h1 {
+            text-align: center;
+            color: #e60012;
+            margin-bottom: 10px;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 i {
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        .input-section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background-color: #f9f9f9;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+        }
+        
+        .input-section:hover {
+            transform: translateY(-5px);
+        }
+        
+        .input-section h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+        }
+        
+        .input-section h2 i {
+            margin-right: 10px;
+            color: #e60012;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #e60012;
+            box-shadow: 0 0 0 3px rgba(230, 0, 18, 0.1);
+        }
+        
+        button {
+            background-color: #e60012;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            background-color: #c40010;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(230, 0, 18, 0.3);
+        }
+        
+        button.secondary {
+            background-color: #666;
+            margin-left: 10px;
+        }
+        
+        button.secondary:hover {
+            background-color: #555;
+            box-shadow: 0 4px 12px rgba(102, 102, 102, 0.3);
+        }
+        
+        .current-section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .current-section h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            color: #856404;
+            display: flex;
+            align-items: center;
+        }
+        
+        .current-section h2 i {
+            margin-right: 10px;
+        }
+        
+        .current-order {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        #currentActions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .queue-section {
+            margin-bottom: 30px;
+        }
+        
+        .queue-section h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+        }
+        
+        .queue-section h2 i {
+            margin-right: 10px;
+            color: #e60012;
+        }
+        
+        .queue-list {
+            list-style: none;
+            background-color: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .queue-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s ease;
+        }
+        
+        .queue-item:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .queue-item:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .queue-item:nth-child(even):hover {
+            background-color: #f0f0f0;
+        }
+        
+        .queue-item .order-info {
+            flex: 1;
+        }
+        
+        .queue-item .order-number {
+            font-weight: bold;
+            margin-right: 15px;
+            color: #e60012;
+        }
+        
+        .completed-section {
+            padding: 25px;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .completed-section h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            color: #155724;
+            display: flex;
+            align-items: center;
+        }
+        
+        .completed-section h2 i {
+            margin-right: 10px;
+        }
+        
+        .completed-list {
+            list-style: none;
+            background-color: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .completed-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s ease;
+        }
+        
+        .completed-item:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .completed-item .order-info {
+            flex: 1;
+        }
+        
+        .status {
+            font-size: 12px;
+            padding: 5px 12px;
+            border-radius: 16px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .status.completed {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .status.skipped {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        .queue-actions, .completed-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .queue-position {
+            background-color: #e60012;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .container {
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        .input-section, .current-section, .queue-section, .completed-section {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        .input-section {
+            animation-delay: 0.2s;
+        }
+        
+        .current-section {
+            animation-delay: 0.4s;
+        }
+        
+        .queue-section {
+            animation-delay: 0.6s;
+        }
+        
+        .completed-section {
+            animation-delay: 0.8s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-clipboard-list"></i>抖音燕云灰度排队系统</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">实时订单排队管理系统</p>
+        
+        <!-- 卖家操作区域 -->
+        <div class="input-section">
+            <h2><i class="fas fa-plus-circle"></i>添加新订单</h2>
+            <div class="input-group">
+                <label for="buyerName">买家名称</label>
+                <input type="text" id="buyerName" placeholder="请输入买家名称">
+            </div>
+            <div class="input-group">
+                <label for="orderInfo">订单信息</label>
+                <input type="text" id="orderInfo" placeholder="请输入订单信息">
+            </div>
+            <button onclick="addOrder()"><i class="fas fa-arrow-right"></i>添加到队列</button>
+        </div>
+        
+        
+        <!-- 当前处理订单 -->
+        <div class="current-section">
+            <h2><i class="fas fa-spinner"></i>当前处理中</h2>
+            <div class="current-order" id="currentOrder">
+                暂无处理中订单
+            </div>
+            <div id="currentActions" style="display: none;">
+                <button onclick="completeOrder()"><i class="fas fa-check"></i>已完成</button>
+                <button class="secondary" onclick="skipOrder()"><i class="fas fa-skip"></i>跳过</button>
+            </div>
+        </div>
+        
+        <!-- 排队列表 -->
+        <div class="queue-section">
+            <h2><i class="fas fa-queue"></i>排队列表</h2>
+            <ul class="queue-list" id="queueList">
+                <li class="queue-item">
+                    <div class="order-info">暂无排队订单</div>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- 已完成/已跳过订单 -->
+        <div class="completed-section">
+            <h2><i class="fas fa-history"></i>已处理订单</h2>
+            <ul class="completed-list" id="completedList">
+                <li class="completed-item">
+                    <div class="order-info">暂无已处理订单</div>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        // 订单队列
+        let orderQueue = [];
+        // 已处理订单
+        let completedOrders = [];
+        // 当前处理的订单
+        let currentOrder = null;
+        // 订单编号计数器
+        let orderId = 1;
+        
+        // 添加订单到队列
+        function addOrder() {
+            const buyerName = document.getElementById('buyerName').value;
+            const orderInfo = document.getElementById('orderInfo').value;
+            
+            if (!buyerName || !orderInfo) {
+                alert('请填写买家名称和订单信息');
+                return;
+            }
+            
+            const order = {
+                id: orderId++,
+                buyerName,
+                orderInfo,
+                timestamp: new Date().toLocaleString()
+            };
+            
+            orderQueue.push(order);
+            updateQueueDisplay();
+            
+            // 如果当前没有处理中的订单，自动开始处理
+            if (!currentOrder && orderQueue.length > 0) {
+                processNextOrder();
+            }
+            
+            // 清空输入框
+            document.getElementById('buyerName').value = '';
+            document.getElementById('orderInfo').value = '';
+        }
+        
+        // 处理下一个订单
+        function processNextOrder() {
+            if (orderQueue.length > 0) {
+                currentOrder = orderQueue.shift();
+                updateCurrentOrderDisplay();
+                updateQueueDisplay();
+            }
+        }
+        
+        // 完成当前订单
+        function completeOrder() {
+            if (currentOrder) {
+                currentOrder.status = 'completed';
+                completedOrders.unshift(currentOrder);
+                currentOrder = null;
+                updateCurrentOrderDisplay();
+                updateCompletedDisplay();
+                processNextOrder();
+            }
+        }
+        
+        // 跳过当前订单
+        function skipOrder() {
+            if (currentOrder) {
+                currentOrder.status = 'skipped';
+                completedOrders.unshift(currentOrder);
+                currentOrder = null;
+                updateCurrentOrderDisplay();
+                updateCompletedDisplay();
+                processNextOrder();
+            }
+        }
+        
+        // 完成队列中的特定订单
+        function completeQueueOrder(index) {
+            const order = orderQueue.splice(index, 1)[0];
+            order.status = 'completed';
+            completedOrders.unshift(order);
+            updateQueueDisplay();
+            updateCompletedDisplay();
+            
+            // 如果当前没有处理中的订单，自动开始处理
+            if (!currentOrder && orderQueue.length > 0) {
+                processNextOrder();
+            }
+        }
+        
+        // 跳过队列中的特定订单
+        function skipQueueOrder(index) {
+            const order = orderQueue.splice(index, 1)[0];
+            order.status = 'skipped';
+            completedOrders.unshift(order);
+            updateQueueDisplay();
+            updateCompletedDisplay();
+            
+            // 如果当前没有处理中的订单，自动开始处理
+            if (!currentOrder && orderQueue.length > 0) {
+                processNextOrder();
+            }
+        }
+        
+        // 重新排队已跳过的订单
+        function requeueOrder(index) {
+            const order = completedOrders.splice(index, 1)[0];
+            // 移除状态，使其成为新的排队订单
+            delete order.status;
+            // 更新时间戳为当前时间
+            order.timestamp = new Date().toLocaleString();
+            orderQueue.push(order);
+            updateQueueDisplay();
+            updateCompletedDisplay();
+            
+            // 如果当前没有处理中的订单，自动开始处理
+            if (!currentOrder && orderQueue.length > 0) {
+                processNextOrder();
+            }
+        }
+        
+        // 更新当前订单显示
+        function updateCurrentOrderDisplay() {
+            const currentOrderElement = document.getElementById('currentOrder');
+            const currentActionsElement = document.getElementById('currentActions');
+            
+            if (currentOrder) {
+                currentOrderElement.innerHTML = `
+                    <div class="order-number">订单 #${currentOrder.id}</div>
+                    <div>买家: ${currentOrder.buyerName}</div>
+                    <div>订单: ${currentOrder.orderInfo}</div>
+                    <div>时间: ${currentOrder.timestamp}</div>
+                `;
+                currentActionsElement.style.display = 'block';
+            } else {
+                currentOrderElement.textContent = '暂无处理中订单';
+                currentActionsElement.style.display = 'none';
+            }
+        }
+        
+        // 更新队列显示
+        function updateQueueDisplay() {
+            const queueListElement = document.getElementById('queueList');
+            
+            if (orderQueue.length === 0) {
+                queueListElement.innerHTML = `
+                    <li class="queue-item">
+                        <div class="order-info">暂无排队订单</div>
+                    </li>
+                `;
+                return;
+            }
+            
+            queueListElement.innerHTML = orderQueue.map((order, index) => `
+                <li class="queue-item">
+                    <div class="order-info">
+                        <span class="order-number">#${order.id}</span>
+                        <span>买家: ${order.buyerName}</span>
+                        <span>订单: ${order.orderInfo}</span>
+                        <span>时间: ${order.timestamp}</span>
+                    </div>
+                    <div class="queue-actions">
+                        <span class="queue-position">${index + 1}</span>
+                        <button onclick="completeQueueOrder(${index})" style="padding: 5px 10px; font-size: 12px; margin-left: 10px;"><i class="fas fa-check"></i>完成</button>
+                        <button onclick="skipQueueOrder(${index})" style="padding: 5px 10px; font-size: 12px; margin-left: 5px; background-color: #666;"><i class="fas fa-skip"></i>跳过</button>
+                    </div>
+                </li>
+            `).join('');
+        }
+        
+        // 更新已处理订单显示
+        function updateCompletedDisplay() {
+            const completedListElement = document.getElementById('completedList');
+            
+            if (completedOrders.length === 0) {
+                completedListElement.innerHTML = `
+                    <li class="completed-item">
+                        <div class="order-info">暂无已处理订单</div>
+                    </li>
+                `;
+                return;
+            }
+            
+            completedListElement.innerHTML = completedOrders.map((order, index) => `
+                <li class="completed-item">
+                    <div class="order-info">
+                        <span class="order-number">#${order.id}</span>
+                        <span>买家: ${order.buyerName}</span>
+                        <span>订单: ${order.orderInfo}</span>
+                        <span>时间: ${order.timestamp}</span>
+                    </div>
+                    <div class="completed-actions">
+                        <div class="status ${order.status}">
+                            ${order.status === 'completed' ? '<i class="fas fa-check"></i> 已完成' : '<i class="fas fa-skip"></i> 已跳过'}
+                        </div>
+                        ${order.status === 'skipped' ? `<button onclick="requeueOrder(${index})" style="padding: 3px 8px; font-size: 11px; margin-left: 10px; background-color: #17a2b8; color: white;"><i class="fas fa-redo"></i> 重新排队</button>` : ''}
+                    </div>
+                </li>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
